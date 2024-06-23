@@ -1,0 +1,7 @@
+{
+    "Common Item": ["Commmon1", "Common2", "Common3"],
+    "Uncommon Item": ["Uncommon1", "Uncommon2", "Uncommon3"],
+    "Rare Item": ["Rare1", "Rare2", "Rare3"],
+    "Super Rare Item": ["SuperRare1", "SuperRare2", "SuperRare3"],
+    "Ultra Rare Item": [""]
+}

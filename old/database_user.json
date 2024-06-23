@@ -1,0 +1,12 @@
+{
+    "Tester": {
+        "World_End": {
+            "IsGuaranteed": false,
+            "NumberRoll": 4
+        },
+        "Banner_Permanent": {
+            "IsGuaranteed": true,
+            "NumberRoll": 1
+        }
+    }
+}
