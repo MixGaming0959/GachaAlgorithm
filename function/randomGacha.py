@@ -135,7 +135,7 @@ class GachaCalculator(DatabaseManager):
         # )
 
         print(
-            f"BannerName: {userDeatail.BannerName}\tGuaranteed: {userDeatail.IsGuaranteed}\tNumberRoll: {userDeatail.NumberRoll}"
+            f"BannerName: {userDeatail.BannerName}\tGuaranteed: {userDeatail.IsGuaranteed}\tNumberRoll: {userDeatail.NumberRoll}\tเศษเกลือ: {userDeatail.Salt}"
         )
         return results
 

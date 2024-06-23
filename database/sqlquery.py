@@ -14,7 +14,7 @@ class DatabaseManager:
     def getUserDetail(self, userName:str, bannerName:str):
         with self.engine.connect() as connection:
             query = f'''
-            SELECT Banner.Name as BannerName, IsGuaranteed, NumberRoll FROM user_gacha_detail
+            SELECT Banner.Name as BannerName, IsGuaranteed, NumberRoll, Salt FROM user_gacha_detail
                 INNER JOIN User ON user_gacha_detail.User_ID = User.ID
                 INNER JOIN Banner ON user_gacha_detail.Banner_Type_ID = Banner.Banner_Type_ID
             WHERE user.userName = '{userName}' AND Banner.Name = '{bannerName}';
