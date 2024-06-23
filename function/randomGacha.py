@@ -38,6 +38,7 @@ class GachaCalculator(DatabaseManager):
                 "Character_ID": ID,
                 "Name": data["Name"][ID],
                 "TierName": data["TierName"][ID],
+                "Salt": data["Salt"][ID],
             }
 
         super().update_user_detail(thisUser)
@@ -82,6 +83,7 @@ class GachaCalculator(DatabaseManager):
             "Character_ID": C_ID,
             "Name": data["Name"][C_ID],
             "TierName": data["TierName"][C_ID],
+            "Salt": data["Salt"][C_ID],
         }
         return item, thisUser
 
@@ -97,7 +99,6 @@ class GachaCalculator(DatabaseManager):
         if gem < num_pulls*self.gachaDiamondsUsed:
             return False, 0
         remaining_diamonds = int(gem-(num_pulls*self.gachaDiamondsUsed))
-        super().update_gem(remaining_diamonds, self.thisUser["UserID"].iloc[0])
         return True, remaining_diamonds
     def multiple_pulls(self, bannerName: str, num_pulls: int):
         condition, gem = self.checkGem(num_pulls)
@@ -109,14 +110,18 @@ class GachaCalculator(DatabaseManager):
             columns=["ID", "User_ID", "Character_ID", "Create_Date", "Banner_Type_ID"]
         )
 
+        salt = 0
         for _ in range(num_pulls):
             item, df_new = self.single_pull(bannerName)
             if len(user_log) < 1:
                 user_log = df_new
             else:
                 user_log = pd.concat([user_log, df_new], ignore_index=True)
+            salt += item["Salt"]
             results.append(item)
-
+        userID = self.thisUser["UserID"].iloc[0]
+        
+        super().update_gem(gem, salt, userID)
 
         nextID = self.getNextID_UserLog()
         for index, _ in user_log.iterrows():

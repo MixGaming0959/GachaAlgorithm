@@ -16,7 +16,7 @@ def main():
 
 
     bannerName = "Mystic"
-    item = gacha_calculator.multiple_pulls(bannerName, 1)
+    item = gacha_calculator.multiple_pulls(bannerName, 5)
 
     for i in range(len(item)):
         print(item[i])

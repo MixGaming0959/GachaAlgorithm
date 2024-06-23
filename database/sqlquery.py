@@ -103,11 +103,14 @@ class DatabaseManager:
             df = pd.DataFrame(sql_query, columns=['Gem'])
             return int(df['Gem'].iloc[0])
         
-    def update_gem(self, gem:int, userID:int):
+    def update_gem(self, gem:int, salt:int, userID:int):
         session = self.Session()
         try:
+            sup_query = f'''
+            (SELECT Salt FROM user WHERE ID = {userID})
+            '''
             update_query = text(f'''
-                UPDATE user SET Gem = {gem} WHERE ID = {userID};
+                UPDATE user SET Gem = {gem}, Salt = ({salt}+{sup_query}) WHERE ID = {userID};
             ''')
             session.execute(update_query)
             session.commit()
@@ -141,7 +144,7 @@ class DatabaseManager:
                 ch.Banner_ID in ( SELECT ID FROM banner WHERE Name in ({','.join(item)}));
             '''
         query = f'''
-            SELECT ch.ID as Character_ID, ch.Name, tier.Name as TierName, Banner.Name as BannerName, bt.ID as BannerTypeID, bt.Name as BannerTypeName FROM `character` as ch
+            SELECT ch.ID as Character_ID, ch.Name, tier.Name as TierName, Banner.Name as BannerName, bt.ID as BannerTypeID, bt.Name as BannerTypeName, tier.Salt FROM `character` as ch
                 INNER JOIN character_tier tier ON ch.Tier_ID = tier.id
                 inner join Banner on Banner.ID = ch.Banner_ID
                 inner join banner_type bt on bt.ID = Banner.banner_type_id 
