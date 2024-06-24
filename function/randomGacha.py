@@ -9,18 +9,23 @@ class GachaCalculator(DatabaseManager):
 
         self.GuaranteRate = 142
         self.gachaDiamondsUsed = 142
+
+        # Rate กาชา
         self.gachaRate = super().get_rate_item()
-        self.gachaItems = super().get_gacha_item()
         self.userName = userName
+
+        # ดึงข้อมูล user gacha detail ล่าสุดขึ้นมา
         self.thisUser = super().get_user_detail(userName)
 
     def getItemGacha(self, tier: str, bannerName: str):
-
+        # ดึงข้อมูล BannerTypeID
         bannerTypeID = super().getBannerTypeID(bannerName)
 
-        # ดึงข้อมูลขึ้นมา
-        
+        # ดึงข้อมูล user gacha detail ล่าสุดขึ้นมา
+        self.thisUser = super().get_user_detail(self.userName)
         thisUser = self.thisUser[self.thisUser.BannerTypeID == bannerTypeID].iloc[0]
+
+        # +1 Roll
         thisUser["NumberRoll"] += 1
 
         # random
@@ -69,7 +74,7 @@ class GachaCalculator(DatabaseManager):
         # ดึง ประเภทของ Banner (Permanent กับ Limited)
         bannerTypes = super().list_banner_type()
 
-        # Filter ประเภทของ ตัวละคร ตามตู้ที่เลือกสุ่ม
+        # ดึง ID ของ ประเภทของตู้ที่เลือก
         BannerTypeID = bannerItem[bannerItem.BannerName == bannerName].BannerTypeID.iloc[0]
 
         # มีการันตีหรือไม่
@@ -84,15 +89,18 @@ class GachaCalculator(DatabaseManager):
                 thisUser.IsGuaranteed = 1
             else:  # สุ่มได้ Limited
                 thisUser.IsGuaranteed = 0
+            # Assign ประเภทของ Banner Type ID ใหม่ที่สุ่มได้
             BannerTypeID = banner["ID"]
 
         # Reset NumberRoll
         thisUser.NumberRoll = 0
+
+        # Filter ตัวละครตามประเภทตู้ที่ได้จาก if else
         bannerItem = bannerItem[bannerItem.BannerTypeID == BannerTypeID]
         chosen_idx = np.random.choice(len(bannerItem), replace=True, size=1)
         data = bannerItem.iloc[chosen_idx].to_dict()
 
-        # assign ค่าลง user_log
+        # assign ค่าลง ตัวละครตามประเภทตู้ที่ได้จาก if else
         C_ID = [*data["Name"]][0]
         item = {
             "Character_ID": C_ID,
@@ -102,7 +110,7 @@ class GachaCalculator(DatabaseManager):
         }
         return item, thisUser
 
-    # สุ่ม 1 โล แต่Functionนี้ จะไม่ถูกใช้งานข้างนอก ให้ใช้ multiple_pulls(1) แทน
+    # สุ่ม 1 โล แต่ Functionนี้ จะไม่ถูกใช้งานข้างนอก ให้ใช้ multiple_pulls(1) แทน
     def single_pull(self, bannerName: str):
         items = self.gachaRate
         item_list = list(items.keys())
@@ -133,6 +141,7 @@ class GachaCalculator(DatabaseManager):
         )
 
         salt = 0
+
         # สุ่มกาชา
         for _ in range(num_pulls):
             item, df_new = self.single_pull(bannerName)
@@ -155,12 +164,9 @@ class GachaCalculator(DatabaseManager):
             user_log.loc[index, "ID"] = nextID
             nextID+=1
         super().insertUserGachaLog(user_log)
-        userDeatail = self.getUserDetail(self.userName, bannerName).iloc[0]
-        # print("BannerName\tGuaranteed\tNumberRoll")
-        # print(
-        #     f"{userDeatail.BannerName}\t{userDeatail.IsGuaranteed}\t\t{userDeatail.NumberRoll}"
-        # )
 
+        # update user detail
+        userDeatail = self.getUserDetail(self.userName, bannerName).iloc[0]
         print(
             f"BannerName: {userDeatail.BannerName}\tGuaranteed: {userDeatail.IsGuaranteed}\tNumberRoll: {userDeatail.NumberRoll}\tเศษเกลือ: {userDeatail.Salt}"
         )

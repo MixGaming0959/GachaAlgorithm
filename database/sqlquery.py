@@ -22,7 +22,8 @@ class DatabaseManager:
             sql_query = pd.read_sql_query(query, connection)
             df = pd.DataFrame(sql_query)
             return df
-        
+    
+    # ดึง ID ของ UserLog ถัดไป
     def getNextID_UserLog(self):
         with self.engine.connect() as connection:
             query = f'''
@@ -32,11 +33,12 @@ class DatabaseManager:
             df = pd.DataFrame(sql_query, columns=["ID"])
             return int(df["ID"].iloc[0])
 
+    # บันทึก UserLog
     def insertUserGachaLog(self, df_userLog):    
         with self.engine.connect() as connection:
             df_userLog.to_sql('user_gacha_log', connection, if_exists='append', index=False)
 
-
+    # อัปเดต User Gacha Detail
     def update_user_detail(self, df_user):
         session = self.Session()
         timeNow = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -54,7 +56,8 @@ class DatabaseManager:
             print(f"Error updating data: {e}")
         finally:
             session.close()
-    
+
+    #  ดึง BannerTypeID 
     def getBannerTypeID(self, bannerName:str):
         with self.engine.connect() as connection:
             
@@ -63,6 +66,7 @@ class DatabaseManager:
             df = pd.DataFrame(sql_query, columns=['BannerTypeID'])
             return int(df['BannerTypeID'].iloc[0])
 
+    # ดึงข้อมูล User Gacha Detail
     def get_user_detail(self, userName:str):
         with self.engine.connect() as connection:
             query = f'''
@@ -73,7 +77,8 @@ class DatabaseManager:
             sql_query = pd.read_sql_query(query, connection)
             df = pd.DataFrame(sql_query)
             return df
-        
+    
+    # ดึงข้อมูล ประเภทของBanner (Permanent กับ Limited)
     def list_banner_type(self):
         with self.engine.connect() as connection:
             query = f'''SELECT * FROM banner_type'''
@@ -81,6 +86,7 @@ class DatabaseManager:
             df = pd.DataFrame(sql_query).to_dict(orient='records')
             return df
 
+    # ดึง Rate Gacha
     def get_rate_item(self):
         with self.engine.connect() as connection:
             query = '''SELECT Name, Rate FROM character_tier'''
@@ -92,22 +98,25 @@ class DatabaseManager:
                 df.loc[index, 'Rate'] /= total_probability
                 data[index] = round(df.loc[index, 'Rate'], 5)
             return data
-        
+    
+    # ดึง Gem จาก User
     def getGemFromUser(self, userName:str):
         with self.engine.connect() as connection:
             query = f'''SELECT Gem FROM user WHERE userName = '{userName}' '''
             sql_query = pd.read_sql_query(query, connection)
             df = pd.DataFrame(sql_query, columns=['Gem'])
             return int(df['Gem'].iloc[0])
-        
+
+    # อัปเดต Gem    
     def update_gem(self, gem:int, salt:int, userID:int):
         session = self.Session()
+        timeNow = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
             sup_query = f'''
             (SELECT Salt FROM user WHERE ID = {userID})
             '''
             update_query = text(f'''
-                UPDATE user SET Gem = {gem}, Salt = ({salt}+{sup_query}) WHERE ID = {userID};
+                UPDATE user SET Gem = {gem}, Salt = ({salt}+{sup_query}), Update_Date {timeNow} WHERE ID = {userID};
             ''')
             session.execute(update_query)
             session.commit()
@@ -117,6 +126,7 @@ class DatabaseManager:
         finally:
             session.close()
 
+    # ดึงข้อมูล Banner ที่เปิดใช้งาน
     def getAvableBanner(self):
         with self.engine.connect() as connection:
             query = f'''SELECT Name, start_date, end_date FROM banner WHERE isEnable = 1'''
@@ -124,6 +134,7 @@ class DatabaseManager:
             df = pd.DataFrame(sql_query)
             return df.to_dict(orient='records')
 
+    # ดึงข้อมูล Character ตามตู้ที่สุ่ม
     def get_gacha_item(self, is_ur:bool=False, bannerName:str='Permanent'):
         dic_bool = {
             True:1,
