@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import pandas as pd
 from database.sqlquery import DatabaseManager
@@ -8,8 +7,8 @@ class GachaCalculator(DatabaseManager):
     def __init__(self, db_name: str, userName: str):
         super().__init__(db_name)
 
-        self.GuaranteRate = int(os.environ.get("GuaranteRate"))
-        self.gachaDiamondsUsed = int(os.environ.get("gachaDiamondsUsed"))
+        self.GuaranteRate = 142
+        self.gachaDiamondsUsed = 142
         self.gachaRate = super().get_rate_item()
         self.gachaItems = super().get_gacha_item()
         self.userName = userName
@@ -17,6 +16,7 @@ class GachaCalculator(DatabaseManager):
 
     def getItemGacha(self, tier: str, bannerName: str):
         # Get User Detail
+
         bannerTypeID = super().getBannerTypeID(bannerName)
         self.thisUser = super().get_user_detail(self.userName)
         thisUser = self.thisUser[self.thisUser.BannerTypeID == bannerTypeID].iloc[0]

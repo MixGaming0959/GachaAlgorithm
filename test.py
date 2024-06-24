@@ -1,14 +1,22 @@
-
 import function.randomGacha as gacha
-from dotenv import load_dotenv
-load_dotenv()
 
-gacha_calculator = gacha.GachaCalculator("database.db", "admin")
+userName = "admin"
 
-bannerName = "World End"
-tier = "SR"
+def main():
+    gacha_calculator = gacha.GachaCalculator("database.db", userName)
 
-item = gacha_calculator.multiple_pulls(bannerName, 10)
+    available_banners = gacha_calculator.getAvableBanner()
+    for i in range(len(available_banners)):
+        print("Banner Name: ", available_banners[i]["Name"])
+        print("Start Date: ", available_banners[i]["start_date"])
+        print("End Date: ", available_banners[i]["end_date"])
+        print()
 
-for i in range(len(item)):
-    print(item[i])
+
+    bannerName = "Mystic"
+    item = gacha_calculator.multiple_pulls(bannerName, 5)
+
+    for i in range(len(item)):
+        print(item[i])
+
+main()

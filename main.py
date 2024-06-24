@@ -1,6 +1,4 @@
 import function.randomGacha as gacha
-from dotenv import load_dotenv
-load_dotenv()
 
 userName = "admin"
 
