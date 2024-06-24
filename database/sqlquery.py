@@ -74,11 +74,8 @@ class DatabaseManager:
             df = pd.DataFrame(sql_query)
             return df
         
-    def list_banner_type(self, bannerType:str='Permanent'):
+    def list_banner_type(self):
         with self.engine.connect() as connection:
-            item = ['Permanent']
-            item.append(bannerType)
-            item = [f'\'{i}\'' for i in item]
             query = f'''SELECT * FROM banner_type'''
             sql_query = pd.read_sql_query(query, connection)
             df = pd.DataFrame(sql_query).to_dict(orient='records')
