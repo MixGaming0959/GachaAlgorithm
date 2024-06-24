@@ -116,7 +116,7 @@ class DatabaseManager:
             (SELECT Salt FROM user WHERE ID = {userID})
             '''
             update_query = text(f'''
-                UPDATE user SET Gem = {gem}, Salt = ({salt}+{sup_query}), Update_Date {timeNow} WHERE ID = {userID};
+                UPDATE user SET Gem = {gem}, Salt = ({salt}+{sup_query}), Update_Date = '{timeNow}' WHERE ID = {userID};
             ''')
             session.execute(update_query)
             session.commit()
