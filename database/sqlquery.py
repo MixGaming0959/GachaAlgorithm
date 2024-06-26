@@ -31,7 +31,10 @@ class DatabaseManager:
             '''
             sql_query = pd.read_sql_query(query, connection)
             df = pd.DataFrame(sql_query, columns=["ID"])
-            return int(df["ID"].iloc[0])
+            nextID = 1
+            if df["ID"].iloc[0] != None:
+                nextID = int(df["ID"].iloc[0])
+            return nextID
 
     # บันทึก UserLog
     def insertUserGachaLog(self, df_userLog):    
@@ -47,7 +50,7 @@ class DatabaseManager:
                 UPDATE user_gacha_detail 
                 SET IsGuaranteed = {df_user["IsGuaranteed"]}, NumberRoll = {df_user["NumberRoll"]} 
                 , Updated_Date = '{timeNow}'
-                WHERE id = {df_user["UserID"]} AND Banner_Type_ID = {df_user["BannerTypeID"]};
+                WHERE User_ID = {df_user["UserID"]} AND Banner_Type_ID = {df_user["BannerTypeID"]};
             ''')
             session.execute(update_query)
             session.commit()

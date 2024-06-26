@@ -7,7 +7,7 @@ class GachaCalculator(DatabaseManager):
     def __init__(self, db_name: str, userName: str):
         super().__init__(db_name)
 
-        self.GuaranteRate = 142
+        self.GuaranteRate = 30
         self.gachaDiamondsUsed = 142
 
         # Rate กาชา
@@ -20,10 +20,9 @@ class GachaCalculator(DatabaseManager):
     def getItemGacha(self, tier: str, bannerName: str):
         # ดึงข้อมูล BannerTypeID
         bannerTypeID = super().getBannerTypeID(bannerName)
-
-        # ดึงข้อมูล user gacha detail ล่าสุดขึ้นมา
-        self.thisUser = super().get_user_detail(self.userName)
+        
         thisUser = self.thisUser[self.thisUser.BannerTypeID == bannerTypeID].iloc[0]
+        index = (self.thisUser.loc[(self.thisUser == bannerTypeID).any(axis=1)].index[0])
 
         # +1 Roll
         thisUser["NumberRoll"] += 1
@@ -55,7 +54,9 @@ class GachaCalculator(DatabaseManager):
         จะ Update NumberRoll และ การันตีว่าเป็น True หรือ False ตามตู้ที่สุ่ม
         '''
 
-        super().update_user_detail(thisUser)
+        # Update ค่าใน Value แทนการไป Getข้อมูลใหม่ที่รอบ แล้วไป Update หลังสุ่มเสร็จแทน
+        self.thisUser.loc[index, "IsGuaranteed"] = thisUser["IsGuaranteed"]
+        self.thisUser.loc[index, "NumberRoll"] = thisUser["NumberRoll"]
         
         data_log = {
             "ID": 0,
@@ -157,6 +158,12 @@ class GachaCalculator(DatabaseManager):
         
         # update gem salt
         super().update_gem(gem, salt, userID)
+
+        # Update ครั้งเดียวหลังจาก สุ่มกาชาหมดแล้ว
+        bannerTypeID = super().getBannerTypeID(bannerName)
+        index = (self.thisUser.loc[(self.thisUser == bannerTypeID).any(axis=1)].index[0])
+        thisUser = self.thisUser[self.thisUser.BannerTypeID == bannerTypeID].iloc[0]
+        super().update_user_detail(thisUser)
 
         # assign UserID ลง user_log
         nextID = self.getNextID_UserLog()
