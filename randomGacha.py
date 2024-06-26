@@ -6,7 +6,7 @@ class GachaCalculator(DatabaseManager):
     def __init__(self, db_name: str, userName: str):
         super().__init__(db_name)
 
-        self.GuaranteRate = 10
+        self.GuaranteRate = 142
         self.gachaDiamondsUsed = 142
 
         # Rate กาชา
@@ -33,7 +33,7 @@ class GachaCalculator(DatabaseManager):
             item, thisUser = self.get_SSR_Item(thisUser, bannerName)
         else:
             # Get สิ่งที่สุ่มมาได้
-            gachaItems = super().get_gacha_item(is_ur=False)
+            gachaItems = super().get_gacha_item(is_ssr=False)
 
             # Filter Tier
             gachaItems = gachaItems[gachaItems.TierName == tier]
@@ -79,7 +79,7 @@ class GachaCalculator(DatabaseManager):
 
     def get_SSR_Item(self, thisUser, bannerName: str):
         # Get ตัวละครที่สามารถสุ่มได้ขึ้นมา ตามตู้ที่เลือกสุ่ม
-        bannerItem = super().get_gacha_item(is_ur=True, bannerName=bannerName)
+        bannerItem = super().get_gacha_item(is_ssr=True, bannerName=bannerName)
 
         # ดึง ประเภทของ Banner (Permanent กับ Limited)
         bannerTypes = super().list_banner_type()

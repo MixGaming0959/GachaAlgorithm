@@ -139,20 +139,20 @@ class DatabaseManager:
             return df.to_dict(orient='records')
 
     # ดึงข้อมูล Character ตามตู้ที่สุ่ม
-    def get_gacha_item(self, is_ur:bool=False, bannerName:str='Permanent'):
+    def get_gacha_item(self, is_ssr:bool=False, bannerName:str='Permanent'):
         dic_bool = {
             True:1,
             False:0
         }
         where = ''
-        if not is_ur:
-            where = f'''WHERE ch.Is_UR = {dic_bool[is_ur]};'''
+        if not is_ssr:
+            where = f'''WHERE ch.Is_SSR = {dic_bool[is_ssr]};'''
         else:
             item = ['Permanent']
             item.append(bannerName)
             item = [f'\'{i}\'' for i in item]
             where = f'''WHERE 
-                ch.Is_UR = {dic_bool[is_ur]} AND 
+                ch.is_ssr = {dic_bool[is_ssr]} AND 
                 bru.Banner_ID in ( SELECT ID FROM banner WHERE Name in ({','.join(item)}));
             '''
         query = f'''
