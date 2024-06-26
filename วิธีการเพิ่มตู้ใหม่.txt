@@ -1,0 +1,30 @@
+ถ้ามีการเพิ่มตัวละครใหม่
+INSERT INTO "character"
+(ID, Name, Tier_ID, Create_Date, Is_SSR)
+VALUES(nextID_C, 'SSR 04', 4, now(), 1);
+
+Tier_ID 1-4: R-SSR
+Is_SSR: if Tier = SSR:	Is_SSR = 1 else: Is_SSR = 0
+
+-------------------------------------
+ถ้ามีการเพิ่ม ตู้สุ่มใหม่
+INSERT INTO banner
+(ID, Name, isEnable, start_date, end_date, banner_type_id)
+VALUES(nextID_B, 'Rate-Up ลิลี่', 1, now(), '2077-06-22 19:06:20', 1);
+
+banner_type_id 1-2 : Limited, Permanent
+isEnable: ก็ตาม start_date, end_date ถ้าอยู่ในเวลาก็ = 1
+-------------------------------------
+เพิ่มตัวละครระดับ
+INSERT INTO banner_rate_up
+(id, charcter_id, banner_id, rate_up)
+VALUES
+(nextID, 17, 10, 1),
+(nextID, 99, 10, 2),
+....
+สมมุติ ID ของลิลี่ = 99
+banner_id idที่สร้าง Banner
+charcter_id ตัวละครที่ต้องการให้อยู่ในตู้ ควรจะเป็น SSR
+rate_up ค่าเริ่มต้นคือ 1 ถ้าทุกตัวเป็น 1 อัตราออกจะเข้ากัน แต่นี่คือRateUpของลิลี่ ทำให้rate_upจะเป็น 2 เป็นต้นไป ให้คิดว่า 2 เท่า
+
+
