@@ -1,4 +1,4 @@
-import pandas as pd
+from pandas import DataFrame, read_sql_query
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -19,8 +19,8 @@ class DatabaseManager:
                 INNER JOIN Banner ON user_gacha_detail.Banner_Type_ID = Banner.Banner_Type_ID
             WHERE user.userName = '{userName}' AND Banner.Name = '{bannerName}';
             '''
-            sql_query = pd.read_sql_query(query, connection)
-            df = pd.DataFrame(sql_query)
+            sql_query = read_sql_query(query, connection)
+            df = DataFrame(sql_query)
             return df
     
     # ดึง ID ของ UserLog ถัดไป
@@ -29,8 +29,8 @@ class DatabaseManager:
             query = f'''
             SELECT MAX(ID)+1 as ID FROM user_gacha_log;
             '''
-            sql_query = pd.read_sql_query(query, connection)
-            df = pd.DataFrame(sql_query, columns=["ID"])
+            sql_query = read_sql_query(query, connection)
+            df = DataFrame(sql_query, columns=["ID"])
             nextID = 1
             if df["ID"].iloc[0] != None:
                 nextID = int(df["ID"].iloc[0])
@@ -65,36 +65,37 @@ class DatabaseManager:
         with self.engine.connect() as connection:
             
             query = f'''SELECT banner_type_id as BannerTypeID FROM banner WHERE Name = '{bannerName}' '''
-            sql_query = pd.read_sql_query(query, connection)
-            df = pd.DataFrame(sql_query, columns=['BannerTypeID'])
+            sql_query = read_sql_query(query, connection)
+            df = DataFrame(sql_query, columns=['BannerTypeID'])
             return int(df['BannerTypeID'].iloc[0])
 
     # ดึงข้อมูล User Gacha Detail
     def get_user_detail(self, userName:str):
         with self.engine.connect() as connection:
             query = f'''
-            SELECT user.id as UserID, banner_type.ID as BannerTypeID, banner_type.Name as BannerType, IsGuaranteed, NumberRoll FROM user_gacha_detail 
-            INNER JOIN user ON user_gacha_detail.User_ID = user.id
-            INNER JOIN banner_type ON user_gacha_detail.Banner_Type_ID = banner_type.id
+            SELECT user.id as UserID, banner_type.ID as BannerTypeID, banner_type.Name as BannerType, IsGuaranteed, NumberRoll 
+            FROM user_gacha_detail 
+                INNER JOIN user ON user_gacha_detail.User_ID = user.id
+                INNER JOIN banner_type ON user_gacha_detail.Banner_Type_ID = banner_type.id
             WHERE user.userName = '{userName}' '''
-            sql_query = pd.read_sql_query(query, connection)
-            df = pd.DataFrame(sql_query)
+            sql_query = read_sql_query(query, connection)
+            df = DataFrame(sql_query)
             return df
     
     # ดึงข้อมูล ประเภทของBanner (Permanent กับ Limited)
     def list_banner_type(self):
         with self.engine.connect() as connection:
             query = f'''SELECT * FROM banner_type'''
-            sql_query = pd.read_sql_query(query, connection)
-            df = pd.DataFrame(sql_query).to_dict(orient='records')
+            sql_query = read_sql_query(query, connection)
+            df = DataFrame(sql_query).to_dict(orient='records')
             return df
 
     # ดึง Rate Gacha
     def get_rate_item(self):
         with self.engine.connect() as connection:
             query = '''SELECT Name, Rate FROM character_tier'''
-            sql_query = pd.read_sql_query(query, connection)
-            df = pd.DataFrame(sql_query).set_index('Name')
+            sql_query = read_sql_query(query, connection)
+            df = DataFrame(sql_query).set_index('Name')
             total_probability = df['Rate'].sum()
             data = {}
             for index, _ in df.iterrows():
@@ -106,8 +107,8 @@ class DatabaseManager:
     def getGemFromUser(self, userName:str):
         with self.engine.connect() as connection:
             query = f'''SELECT Gem FROM user WHERE userName = '{userName}' '''
-            sql_query = pd.read_sql_query(query, connection)
-            df = pd.DataFrame(sql_query, columns=['Gem'])
+            sql_query = read_sql_query(query, connection)
+            df = DataFrame(sql_query, columns=['Gem'])
             return int(df['Gem'].iloc[0])
 
     # อัปเดต Gem    
@@ -133,8 +134,8 @@ class DatabaseManager:
     def getAvableBanner(self):
         with self.engine.connect() as connection:
             query = f'''SELECT Name, start_date, end_date FROM banner WHERE isEnable = 1'''
-            sql_query = pd.read_sql_query(query, connection)
-            df = pd.DataFrame(sql_query)
+            sql_query = read_sql_query(query, connection)
+            df = DataFrame(sql_query)
             return df.to_dict(orient='records')
 
     # ดึงข้อมูล Character ตามตู้ที่สุ่ม
@@ -152,19 +153,24 @@ class DatabaseManager:
             item = [f'\'{i}\'' for i in item]
             where = f'''WHERE 
                 ch.Is_UR = {dic_bool[is_ur]} AND 
-                ch.Banner_ID in ( SELECT ID FROM banner WHERE Name in ({','.join(item)}));
+                bru.Banner_ID in ( SELECT ID FROM banner WHERE Name in ({','.join(item)}));
             '''
         query = f'''
-            SELECT ch.ID as Character_ID, ch.Name, tier.Name as TierName, Banner.Name as BannerName, bt.ID as BannerTypeID, bt.Name as BannerTypeName, tier.Salt FROM `character` as ch
+            SELECT ch.ID as Character_ID, ch.Name, tier.Name as TierName, 
+                Banner.Name as BannerName, bt.ID as BannerTypeID, 
+                bt.Name as BannerTypeName, tier.Salt, bru.Rate_Up as Rate_Up
+            FROM `character` as ch
                 INNER JOIN character_tier tier ON ch.Tier_ID = tier.id
-                inner join Banner on Banner.ID = ch.Banner_ID
-                inner join banner_type bt on bt.ID = Banner.banner_type_id 
+                INNER JOIN banner_rate_up bru on bru.charcter_id = ch.id
+                INNER JOIN Banner on Banner.ID = bru.Banner_ID
+                INNER JOIN banner_type bt on bt.ID = Banner.banner_type_id 
             {where}
             '''
         with self.engine.connect() as connection:
             
-            sql_query = pd.read_sql_query(query, connection)
-            df = pd.DataFrame(sql_query).set_index('Character_ID')
+            sql_query = read_sql_query(query, connection)
+            df = DataFrame(sql_query).set_index('Character_ID')
+            df['Rate_Up'] = df['Rate_Up'].astype(float)
             return df
 
 
