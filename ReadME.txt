@@ -1,3 +1,5 @@
+pip install -r requirements.txt
+ใช้เพื่อให้ version library ตรงกัน
 ---------------------------------------------
 v 1.0
 สร้าง อัลกอริทึมสุ่ม gacha
