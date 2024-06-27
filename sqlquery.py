@@ -1,178 +1,136 @@
-from pandas import DataFrame, read_sql_query
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
+import sqlite3
 from datetime import datetime
 
 class DatabaseManager:
     def __init__(self, db_name):
-        self.engine = create_engine(f'sqlite:///{db_name}')
-        self.Session = sessionmaker(bind=self.engine)
+        self.db_name = db_name
 
     def connect(self):
-        return self.engine.connect()
-    
-    def getUserDetail(self, userName:str, bannerName:str):
-        with self.engine.connect() as connection:
-            query = f'''
-            SELECT Banner.Name as BannerName, IsGuaranteed, NumberRoll, Salt FROM user_gacha_detail
-                INNER JOIN User ON user_gacha_detail.User_ID = User.ID
-                INNER JOIN Banner ON user_gacha_detail.Banner_Type_ID = Banner.Banner_Type_ID
-            WHERE user.userName = '{userName}' AND Banner.Name = '{bannerName}';
-            '''
-            sql_query = read_sql_query(query, connection)
-            df = DataFrame(sql_query)
-            return df
-    
-    # ดึง ID ของ UserLog ถัดไป
-    def getNextID_UserLog(self):
-        with self.engine.connect() as connection:
-            query = f'''
-            SELECT MAX(ID)+1 as ID FROM user_gacha_log;
-            '''
-            sql_query = read_sql_query(query, connection)
-            df = DataFrame(sql_query, columns=["ID"])
-            nextID = 1
-            if df["ID"].iloc[0] != None:
-                nextID = int(df["ID"].iloc[0])
-            return nextID
+        return sqlite3.connect(self.db_name)
 
-    # บันทึก UserLog
-    def insertUserGachaLog(self, df_userLog):    
-        with self.engine.connect() as connection:
-            df_userLog.to_sql('user_gacha_log', connection, if_exists='append', index=False)
+    def execute_query(self, query, params=None):
+        with self.connect() as conn:
+            cursor = conn.cursor()
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            return cursor.fetchall()
 
-    # อัปเดต User Gacha Detail
-    def update_user_detail(self, df_user):
-        session = self.Session()
-        timeNow = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        try:
-            update_query = text(f'''
-                UPDATE user_gacha_detail 
-                SET IsGuaranteed = {df_user["IsGuaranteed"]}, NumberRoll = {df_user["NumberRoll"]} 
-                , Updated_Date = '{timeNow}'
-                WHERE User_ID = {df_user["UserID"]} AND Banner_Type_ID = {df_user["BannerTypeID"]};
-            ''')
-            session.execute(update_query)
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            print(f"Error updating data: {e}")
-        finally:
-            session.close()
+    def execute_many(self, query, data):
+        with self.connect() as conn:
+            cursor = conn.cursor()
+            cursor.executemany(query, data)
+            conn.commit()
 
-    #  ดึง BannerTypeID 
-    def getBannerTypeID(self, bannerName:str):
-        with self.engine.connect() as connection:
-            
-            query = f'''SELECT banner_type_id as BannerTypeID FROM banner WHERE Name = '{bannerName}' '''
-            sql_query = read_sql_query(query, connection)
-            df = DataFrame(sql_query, columns=['BannerTypeID'])
-            return int(df['BannerTypeID'].iloc[0])
-
-    # ดึงข้อมูล User Gacha Detail
-    def get_user_detail(self, userName:str):
-        with self.engine.connect() as connection:
-            query = f'''
-            SELECT user.id as UserID, banner_type.ID as BannerTypeID, banner_type.Name as BannerType, IsGuaranteed, NumberRoll 
-            FROM user_gacha_detail 
-                INNER JOIN user ON user_gacha_detail.User_ID = user.id
-                INNER JOIN banner_type ON user_gacha_detail.Banner_Type_ID = banner_type.id
-            WHERE user.userName = '{userName}' '''
-            sql_query = read_sql_query(query, connection)
-            df = DataFrame(sql_query)
-            return df
-    
-    # ดึงข้อมูล ประเภทของBanner (Permanent กับ Limited)
-    def list_banner_type(self):
-        with self.engine.connect() as connection:
-            query = f'''SELECT * FROM banner_type'''
-            sql_query = read_sql_query(query, connection)
-            df = DataFrame(sql_query).to_dict(orient='records')
-            return df
-
-    # ดึง Rate Gacha
-    def get_rate_item(self):
-        with self.engine.connect() as connection:
-            query = '''SELECT Name, Rate FROM character_tier'''
-            sql_query = read_sql_query(query, connection)
-            df = DataFrame(sql_query).set_index('Name')
-            total_probability = df['Rate'].sum()
-            data = {}
-            for index, _ in df.iterrows():
-                df.loc[index, 'Rate'] /= total_probability
-                data[index] = round(df.loc[index, 'Rate'], 5)
-            return data
-    
-    # ดึง Gem จาก User
-    def getGemFromUser(self, userName:str):
-        with self.engine.connect() as connection:
-            query = f'''SELECT Gem FROM user WHERE userName = '{userName}' '''
-            sql_query = read_sql_query(query, connection)
-            df = DataFrame(sql_query, columns=['Gem'])
-            return int(df['Gem'].iloc[0])
-
-    # อัปเดต Gem    
-    def update_gem(self, gem:int, salt:int, userID:int):
-        session = self.Session()
-        timeNow = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        try:
-            sup_query = f'''
-            (SELECT Salt FROM user WHERE ID = {userID})
-            '''
-            update_query = text(f'''
-                UPDATE user SET Gem = {gem}, Salt = ({salt}+{sup_query}), Update_Date = '{timeNow}' WHERE ID = {userID};
-            ''')
-            session.execute(update_query)
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            print(f"Error updating data: {e}")
-        finally:
-            session.close()
-
-    # ดึงข้อมูล Banner ที่เปิดใช้งาน
-    def getAvableBanner(self):
-        with self.engine.connect() as connection:
-            query = f'''SELECT Name, start_date, end_date FROM banner WHERE isEnable = 1'''
-            sql_query = read_sql_query(query, connection)
-            df = DataFrame(sql_query)
-            return df.to_dict(orient='records')
-
-    # ดึงข้อมูล Character ตามตู้ที่สุ่ม
-    def get_gacha_item(self, is_ssr:bool=False, bannerName:str='Permanent'):
-        dic_bool = {
-            True:1,
-            False:0
-        }
-        where = ''
-        if not is_ssr:
-            where = f'''WHERE ch.Is_SSR = {dic_bool[is_ssr]};'''
+    def get_user_gem(self, username: str):
+        query = '''
+        SELECT Gem
+        FROM user
+        WHERE UserName = ?
+        '''
+        result = self.execute_query(query, (username,))
+        if result:
+            return result[0][0]  # คืนค่า Gem ถ้าพบข้อมูล
         else:
-            item = ['Permanent']
-            item.append(bannerName)
-            item = [f'\'{i}\'' for i in item]
-            where = f'''WHERE 
-                ch.is_ssr = {dic_bool[is_ssr]} AND 
-                bru.Banner_ID in ( SELECT ID FROM banner WHERE Name in ({','.join(item)}));
-            '''
-        query = f'''
-            SELECT ch.ID as Character_ID, ch.Name, tier.Name as TierName, 
-                Banner.Name as BannerName, bt.ID as BannerTypeID, 
-                bt.Name as BannerTypeName, tier.Salt, bru.Rate_Up as Rate_Up
-            FROM `character` as ch
-                INNER JOIN character_tier tier ON ch.Tier_ID = tier.id
-                INNER JOIN banner_rate_up bru on bru.charcter_id = ch.id
-                INNER JOIN Banner on Banner.ID = bru.Banner_ID
-                INNER JOIN banner_type bt on bt.ID = Banner.banner_type_id 
-            {where}
-            '''
-        with self.engine.connect() as connection:
-            
-            sql_query = read_sql_query(query, connection)
-            df = DataFrame(sql_query).set_index('Character_ID')
-            df['Rate_Up'] = df['Rate_Up'].astype(float)
-            return df
+            return None  # คืนค่า None ถ้าไม่พบข้อมูล
 
+    def getUserDetail(self, userName: str, bannerName: str):
+        query = '''
+        SELECT Banner.Name as BannerName, IsGuaranteed, NumberRoll, Salt FROM user_gacha_detail
+            INNER JOIN User ON user_gacha_detail.User_ID = User.ID
+            INNER JOIN Banner ON user_gacha_detail.Banner_Type_ID = Banner.Banner_Type_ID
+        WHERE user.userName = ? AND Banner.Name = ?;
+        '''
+        result = self.execute_query(query, (userName, bannerName))
+        # ยังไงก็มีแค่ 1 row อยู่ดี
+        return [dict(zip(['BannerName', 'IsGuaranteed', 'NumberRoll', 'Salt'], row)) for row in result][0]
+
+    def getNextID_UserLog(self):
+        query = 'SELECT MAX(ID)+1 as ID FROM user_gacha_log;'
+        result = self.execute_query(query)
+        return result[0][0] if result[0][0] is not None else 1
+
+    def insertUserGachaLog(self, user_log):
+        query = '''
+        INSERT INTO user_gacha_log (User_ID, Character_ID, Create_Date, Banner_Type_ID)
+        VALUES (?, ?, ?, ?)
+        '''
+        self.execute_many(query, [(log['User_ID'], log['Character_ID'], log['Create_Date'], log['Banner_Type_ID']) for log in user_log])
+
+    def update_user_detail(self, user):
+        query = '''
+        UPDATE user_gacha_detail 
+        SET IsGuaranteed = ?, NumberRoll = ?, Updated_Date = ?
+        WHERE User_ID = ? AND Banner_Type_ID = ?;
+        '''
+        self.execute_query(query, (user['IsGuaranteed'], user['NumberRoll'], datetime.now().isoformat(), user['UserID'], user['BannerTypeID']))
+
+    def getBannerTypeID(self, bannerName: str):
+        query = 'SELECT banner_type_id as BannerTypeID FROM banner WHERE Name = ?'
+        result = self.execute_query(query, (bannerName,))
+        return result[0][0] if result else None
+
+    def get_user_detail(self, userName: str):
+        query = '''
+        SELECT user.id as UserID, banner_type.ID as BannerTypeID, banner_type.Name as BannerType, IsGuaranteed, NumberRoll 
+        FROM user_gacha_detail 
+            INNER JOIN user ON user_gacha_detail.User_ID = user.id
+            INNER JOIN banner_type ON user_gacha_detail.Banner_Type_ID = banner_type.id
+        WHERE user.userName = ?
+        '''
+        result = self.execute_query(query, (userName,))
+        return [dict(zip(['UserID', 'BannerTypeID', 'BannerType', 'IsGuaranteed', 'NumberRoll'], row)) for row in result]
+
+    def list_banner_type(self):
+        query = 'SELECT * FROM banner_type'
+        result = self.execute_query(query)
+        return [dict(zip(['ID', 'Name'], row)) for row in result]
+
+    def get_rate_item(self):
+        query = 'SELECT Name, Rate FROM character_tier'
+        result = self.execute_query(query)
+        data = {row[0]: row[1] for row in result}
+        total_probability = sum(data.values())
+        return {k: round(v / total_probability, 5) for k, v in data.items()}
+
+    def getGemFromUser(self, userName: str):
+        query = 'SELECT Gem FROM user WHERE userName = ?'
+        result = self.execute_query(query, (userName,))
+        return result[0][0] if result else 0
+
+    def update_gem(self, gem: int, salt: int, userID: int):
+        query = '''
+        UPDATE user SET Gem = ?, Salt = Salt + ?, Update_Date = ?
+        WHERE ID = ?;
+        '''
+        self.execute_query(query, (gem, salt, datetime.now().isoformat(), userID))
+
+    def getAvableBanner(self):
+        query = 'SELECT Name, start_date, end_date FROM banner WHERE isEnable = 1'
+        result = self.execute_query(query)
+        return [dict(zip(['Name', 'start_date', 'end_date'], row)) for row in result]
+
+    def get_gacha_item(self, is_ssr: bool = False, bannerName: str = 'Permanent'):
+        where_clause = 'WHERE ch.Is_SSR = ?'
+        params = [1 if is_ssr else 0]
+        if is_ssr:
+            where_clause += ' AND bru.Banner_ID in ( SELECT ID FROM banner WHERE Name in (?, ?))'
+            params.extend(['Permanent', bannerName])
+
+        query = f'''
+        SELECT ch.ID as Character_ID, ch.Name, tier.Name as TierName, 
+            Banner.Name as BannerName, bt.ID as BannerTypeID, 
+            bt.Name as BannerTypeName, tier.Salt, bru.Rate_Up as Rate_Up
+        FROM `character` as ch
+            INNER JOIN character_tier tier ON ch.Tier_ID = tier.id
+            INNER JOIN banner_rate_up bru on bru.charcter_id = ch.id
+            INNER JOIN Banner on Banner.ID = bru.Banner_ID
+            INNER JOIN banner_type bt on bt.ID = Banner.banner_type_id 
+        {where_clause}
+        '''
+        result = self.execute_query(query, params)
+        return [dict(zip(['Character_ID', 'Name', 'TierName', 'BannerName', 'BannerTypeID', 'BannerTypeName', 'Salt', 'Rate_Up'], row)) for row in result]
 
 if __name__ == "__main__":
     # Connect to SQLite database
@@ -183,7 +141,3 @@ if __name__ == "__main__":
     # Get rate items
     item = db_manager.getGemFromUser(userName)
     print(item)
-    
-    # # Get gacha items
-    # gacha_items = db_manager.get_gacha_item()
-    # print(gacha_items)

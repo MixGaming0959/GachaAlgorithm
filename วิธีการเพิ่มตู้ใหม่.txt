@@ -1,7 +1,7 @@
 ถ้ามีการเพิ่มตัวละครใหม่
 INSERT INTO "character"
 (ID, Name, Tier_ID, Create_Date, Is_SSR)
-VALUES(nextID_C, 'SSR 04', 4, now(), 1);
+VALUES(nextID_C, 'ลิลี่', 4, now(), 1);
 
 Tier_ID 1-4: R-SSR
 Is_SSR: if Tier = SSR:	Is_SSR = 1 else: Is_SSR = 0
@@ -25,6 +25,6 @@ VALUES
 สมมุติ ID ของลิลี่ = 99
 banner_id idที่สร้าง Banner
 charcter_id ตัวละครที่ต้องการให้อยู่ในตู้ ควรจะเป็น SSR
-rate_up ค่าเริ่มต้นคือ 1 ถ้าทุกตัวเป็น 1 อัตราออกจะเข้ากัน แต่นี่คือRateUpของลิลี่ ทำให้rate_upจะเป็น 2 เป็นต้นไป ให้คิดว่า 2 เท่า
+rate_up ค่าเริ่มต้นคือ 1 ถ้าทุกตัวเป็น 1 อัตราออกจะเท่ากัน แต่นี่คือRateUpของลิลี่ ทำให้rate_upของลิลี่จะเป็น 2++ เป็นต้นไป จะมี 2 ตัวใน1ตู้ ทำให้โอกาสออกมากขึ้น
 
 

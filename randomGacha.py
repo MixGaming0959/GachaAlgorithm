@@ -1,12 +1,26 @@
-from numpy.random import choice
-from pandas import DataFrame, concat, Timestamp
+import os
+import sys
+import random
+from datetime import datetime
 from sqlquery import DatabaseManager
 
+def get_db_file():
+    if getattr(sys, '_MEIPASS', None):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+
+    # สร้าง path ไปยังไฟล์ db
+    return os.path.join(base_path, "Assets", "database.db")
+
 class GachaCalculator(DatabaseManager):
-    def __init__(self, db_name: str, userName: str):
+    def __init__(self, userName: str):
+        db_name = get_db_file()
         super().__init__(db_name)
 
+        # จำนวนครั้งในการการันตี
         self.GuaranteRate = 142
+        # จำนวน gem ที่ใช้ต่อการสุ่ม 1 ครั้ง
         self.gachaDiamondsUsed = 142
 
         # Rate กาชา
@@ -20,15 +34,12 @@ class GachaCalculator(DatabaseManager):
         # ดึงข้อมูล BannerTypeID
         bannerTypeID = super().getBannerTypeID(bannerName)
         
-        thisUser = self.thisUser[self.thisUser.BannerTypeID == bannerTypeID].iloc[0]
-        index = (self.thisUser.loc[(self.thisUser == bannerTypeID).any(axis=1)].index[0])
+        thisUser = next(user for user in self.thisUser if user["BannerTypeID"] == bannerTypeID)
+        index = next(i for i, user in enumerate(self.thisUser) if user["BannerTypeID"] == bannerTypeID)
 
         # +1 Roll
         thisUser["NumberRoll"] += 1
 
-        # random
-        # ถ้า NumberRoll ที่ GuaranteRate จะได้ SSR
-        # ถ้าไม่จะ สุ่ม N ถึง SR
         if tier == "SSR" or thisUser["NumberRoll"] > self.GuaranteRate:
             item, thisUser = self.get_SSR_Item(thisUser, bannerName)
         else:
@@ -36,14 +47,14 @@ class GachaCalculator(DatabaseManager):
             gachaItems = super().get_gacha_item(is_ssr=False)
 
             # Filter Tier
-            gachaItems = gachaItems[gachaItems.TierName == tier]
+            gachaItems = [item for item in gachaItems if item["TierName"] == tier]
 
-            # normalize Probabilities ให้รวมกัน = 1
+            # normalize Probabilities
             gachaItems = self.normalize_Probabilities(gachaItems)
-            probabilities = gachaItems["Rate_Up"].to_list()
-            chosen_idx = choice(len(gachaItems), replace=True, size=1, p=probabilities)[0]
-            data = gachaItems.iloc[chosen_idx].to_dict()
-            ID = [*data["Name"]][0]
+            probabilities = [item["Rate_Up"] for item in gachaItems]
+            chosen_idx = random.choices(range(len(gachaItems)), weights=probabilities, k=1)[0]
+            data = gachaItems[chosen_idx]
+            ID = data["Name"]
             # ตัวละครที่สุ่มได้ N-SR
             item = {
                 "Character_ID": ID,
@@ -51,30 +62,23 @@ class GachaCalculator(DatabaseManager):
                 "TierName": data["TierName"],
                 "Salt": data["Salt"],
             }
-        '''
-        gacha user detail 
-            จะเก็บว่า user นี้สุ่มตู้ ถาวร กับ Limited ไปแล้วเท่าไหร่ และตู้นั้นมีการันตีหรือไม่
 
-        จะ Update NumberRoll และ การันตีว่าเป็น True หรือ False ตามตู้ที่สุ่ม
-        '''
-
-        # Update ค่าใน Value แทนการไป Getข้อมูลใหม่ที่รอบ แล้วไป Update หลังสุ่มเสร็จแทน
-        self.thisUser.loc[index, "IsGuaranteed"] = thisUser["IsGuaranteed"]
-        self.thisUser.loc[index, "NumberRoll"] = thisUser["NumberRoll"]
+        # Update ค่าใน Value
+        self.thisUser[index]["IsGuaranteed"] = thisUser["IsGuaranteed"]
+        self.thisUser[index]["NumberRoll"] = thisUser["NumberRoll"]
         
         data_log = {
             "User_ID": thisUser["UserID"],
             "Character_ID": item["Character_ID"],
-            "Create_Date": Timestamp("now"),
+            "Create_Date": datetime.now().isoformat(),
             "Banner_Type_ID": bannerTypeID,
         }
-        df_log = DataFrame([data_log])
-        return item, df_log
+        return item, [data_log]
 
     def normalize_Probabilities(self, rate_Items):
-        total_probability = rate_Items["Rate_Up"].sum()
-        for index, _ in rate_Items.iterrows():
-            rate_Items.loc[index, "Rate_Up"] /= total_probability
+        total_probability = sum(item["Rate_Up"] for item in rate_Items)
+        for item in rate_Items:
+            item["Rate_Up"] /= total_probability
         return rate_Items
 
     def get_SSR_Item(self, thisUser, bannerName: str):
@@ -85,35 +89,35 @@ class GachaCalculator(DatabaseManager):
         bannerTypes = super().list_banner_type()
 
         # ดึง ID ของ ประเภทของตู้ที่เลือก
-        BannerTypeID = bannerItem[bannerItem.BannerName == bannerName].BannerTypeID.iloc[0]
+        BannerTypeID = next(item["BannerTypeID"] for item in bannerItem if item["BannerName"] == bannerName)
 
         # มีการันตีหรือไม่
-        if thisUser.IsGuaranteed == True:
+        if thisUser["IsGuaranteed"] == True:
             # ได้ตามตู้ที่เลือกสุ่มแน่นอน
-            thisUser.IsGuaranteed = 0
+            thisUser["IsGuaranteed"] = 0
         else:
             # สุ่มได้ Permanent กับ Limited
-            chosen_idx = choice(len(bannerTypes), replace=True, size=1)[0]
+            chosen_idx = random.choices(range(len(bannerTypes)), k=1)[0]
             banner = bannerTypes[chosen_idx]
             if banner["Name"] == "Permanent":
-                thisUser.IsGuaranteed = 1
+                thisUser["IsGuaranteed"] = 1
             else:  # สุ่มได้ Limited
-                thisUser.IsGuaranteed = 0
+                thisUser["IsGuaranteed"] = 0
             # Assign ประเภทของ Banner Type ID ใหม่ที่สุ่มได้
             BannerTypeID = banner["ID"]
 
         # Reset NumberRoll
-        thisUser.NumberRoll = 0
+        thisUser["NumberRoll"] = 0
 
         # Filter ตัวละครตามประเภทตู้ที่ได้จาก if else
-        bannerItem = bannerItem[bannerItem.BannerTypeID == BannerTypeID]
+        bannerItem = [item for item in bannerItem if item["BannerTypeID"] == BannerTypeID]
         bannerItem = self.normalize_Probabilities(bannerItem)
-        probabilities = bannerItem["Rate_Up"].to_list()
-        chosen_idx = choice(len(bannerItem), replace=True, size=1, p=probabilities)[0]
-        data = bannerItem.iloc[chosen_idx].to_dict()
+        probabilities = [item["Rate_Up"] for item in bannerItem]
+        chosen_idx = random.choices(range(len(bannerItem)), weights=probabilities, k=1)[0]
+        data = bannerItem[chosen_idx]
 
         # assign ค่าลง ตัวละครตามประเภทตู้ที่ได้จาก if else
-        C_ID = [*data["Name"]][0]
+        C_ID = data["Name"]
         item = {
             "Character_ID": C_ID,
             "Name": data["Name"],
@@ -122,15 +126,13 @@ class GachaCalculator(DatabaseManager):
         }
         return item, thisUser
 
-    # สุ่ม 1 โล แต่ Functionนี้ จะไม่ถูกใช้งานข้างนอก ให้ใช้ multiple_pulls(1) แทน
     def single_pull(self, bannerName: str):
         items = self.gachaRate
         item_list = list(items.keys())
         probabilities = list(items.values())
-        tier = choice(item_list, size=1, replace=True, p=probabilities)[0]
+        tier = random.choices(item_list, weights=probabilities, k=1)[0]
         return self.getItemGacha(tier, bannerName)
 
-    # Check Gem
     def checkGem(self, num_pulls:int):
         gem = super().getGemFromUser(self.userName)
         if gem < num_pulls*self.gachaDiamondsUsed:
@@ -148,9 +150,7 @@ class GachaCalculator(DatabaseManager):
             return {"Error": "Not Enough Gem"}
 
         results = []
-        user_log = DataFrame(
-            columns=["User_ID", "Character_ID", "Create_Date", "Banner_Type_ID"]
-        )
+        user_log = []
 
         salt = 0
 
@@ -159,27 +159,22 @@ class GachaCalculator(DatabaseManager):
             item, df_new = self.single_pull(bannerName)
 
             # update user log
-            if len(user_log) < 1:
-                user_log = df_new
-            else:
-                user_log = concat([user_log, df_new], ignore_index=True)
+            user_log.extend(df_new)
             salt += item["Salt"]
             results.append(item)
-        userID = self.thisUser["UserID"].iloc[0]
+        userID = self.thisUser[0]["UserID"]
         
         # update gem salt
         super().update_gem(gem, salt, userID)
 
         # Update ครั้งเดียวหลังจาก สุ่มกาชาหมดแล้ว
         bannerTypeID = super().getBannerTypeID(bannerName)
-        thisUser = self.thisUser[self.thisUser.BannerTypeID == bannerTypeID].iloc[0]
+        thisUser = next(user for user in self.thisUser if user["BannerTypeID"] == bannerTypeID)
         super().update_user_detail(thisUser)
 
         super().insertUserGachaLog(user_log)
 
-
         return results
-
 
 if __name__ == "__main__":
     # Connect to SQLite database
