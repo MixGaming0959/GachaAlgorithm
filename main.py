@@ -6,14 +6,13 @@ def main():
     gacha_calculator = gacha.GachaCalculator(userName)
     # printAvableBanner(gacha_calculator)
     bannerName = "Rate-Up Mild-R"
-    num_pulls = 1420
+    num_pulls = 10
     item = gacha_calculator.multiple_pulls(bannerName, num_pulls)
-    # userDeatail = gacha_calculator.getUserDetail(userName, bannerName)
+    userDeatail = gacha_calculator.getUserDetail(userName, bannerName)
     print("เพชรคงเหลือ: ", gacha_calculator.get_user_gem(userName))
 
-    # print(f"BannerName: {userDeatail['BannerName']}\tGuaranteed: {userDeatail['IsGuaranteed']}\tNumberRoll: {userDeatail['NumberRoll']}\tเศษเกลือ: {userDeatail['Salt']}")
-    # for i in range(len(item)):
-    #     print("Name: %20s,\t Tier: %3s,\t"%(item[i]["Name"], item[i]["TierName"]))
+    print(f"BannerName: {userDeatail['BannerName']}\tGuaranteed: {userDeatail['IsGuaranteed']}\tNumberRoll: {userDeatail['NumberRoll']}\tเศษเกลือ: {userDeatail['Salt']}")
+
     count_tier = {"Count":0}
     count_SSR = {"Count":0}
     for i in range(len(item)):
