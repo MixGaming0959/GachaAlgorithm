@@ -21,7 +21,7 @@ class GachaCalculator(DatabaseManager):
         # จำนวนครั้งในการการันตี
         self.GuaranteRate = 142
         # จำนวน gem ที่ใช้ต่อการสุ่ม 1 ครั้ง
-        self.gachaDiamondsUsed = 1
+        self.gachaDiamondsUsed = 142
 
         # Rate กาชา
         self.gachaRate = super().get_rate_item()
