@@ -15,7 +15,7 @@ userName = "admin"
 
 def main():
     gacha_calculator = gacha.GachaCalculator(get_db_file(), userName)
-    # printAvableBanner(gacha_calculator)
+    printAvableBanner(gacha_calculator)
     bannerName = "Rate-Up Mild-R"
     
     item = gacha_calculator.multiple_pulls(bannerName, 10)
