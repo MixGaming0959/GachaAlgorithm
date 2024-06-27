@@ -52,7 +52,7 @@ class DatabaseManager:
         INSERT INTO user_gacha_log (User_ID, Character_ID, Create_Date, Banner_Type_ID)
         VALUES (?, ?, current_timestamp, ?)
         '''
-        print(user_log)
+
         self.execute_many(query, [(log['User_ID'], log['Character_ID'], log['Banner_Type_ID']) for log in user_log])
 
     def update_user_detail(self, user):
@@ -80,8 +80,7 @@ class DatabaseManager:
         WHERE user.userName = ? ;
         '''
         result = self.execute_query(query, (userName,))
-        
-        print(result)
+
         if len(result) < len(self.list_banner_type()):
             self.insertUserDetail(userName)
             result = self.get_user_detail(userName)
@@ -159,4 +158,3 @@ if __name__ == "__main__":
 
     # Get rate items
     item = db_manager.getGemFromUser(userName)
-    print(item)

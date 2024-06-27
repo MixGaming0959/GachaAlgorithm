@@ -6,7 +6,7 @@ def main():
     gacha_calculator = gacha.GachaCalculator(userName)
     # printAvableBanner(gacha_calculator)
     bannerName = "Rate-Up T-Reina Ashyra"
-    num_pulls = 2
+    num_pulls = 1420
     results = gacha_calculator.multiple_pulls(bannerName, num_pulls)
     item = results["Result"]
     err = results["Error"]
