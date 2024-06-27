@@ -1,6 +1,6 @@
 import os
 import sys
-import random
+from random import choices
 from datetime import datetime
 from sqlquery import DatabaseManager
 
@@ -21,7 +21,7 @@ class GachaCalculator(DatabaseManager):
         # จำนวนครั้งในการการันตี
         self.GuaranteRate = 142
         # จำนวน gem ที่ใช้ต่อการสุ่ม 1 ครั้ง
-        self.gachaDiamondsUsed = 142
+        self.gachaDiamondsUsed = 1
 
         # Rate กาชา
         self.gachaRate = super().get_rate_item()
@@ -41,27 +41,28 @@ class GachaCalculator(DatabaseManager):
         thisUser["NumberRoll"] += 1
 
         if tier == "SSR" or thisUser["NumberRoll"] > self.GuaranteRate:
-            item, thisUser = self.get_SSR_Item(thisUser, bannerName)
+            gachaItems, thisUser = self.get_SSR_Item(thisUser, bannerName)
+            tier = "SSR"
         else:
             # Get สิ่งที่สุ่มมาได้
             gachaItems = super().get_gacha_item(is_ssr=False)
 
-            # Filter Tier
-            gachaItems = [item for item in gachaItems if item["TierName"] == tier]
+        # Filter Tier
+        gachaItems = [item for item in gachaItems if item["TierName"] == tier]
 
-            # normalize Probabilities
-            gachaItems = self.normalize_Probabilities(gachaItems)
-            probabilities = [item["Rate_Up"] for item in gachaItems]
-            chosen_idx = random.choices(range(len(gachaItems)), weights=probabilities, k=1)[0]
-            data = gachaItems[chosen_idx]
-            ID = data["Name"]
-            # ตัวละครที่สุ่มได้ N-SR
-            item = {
-                "Character_ID": ID,
-                "Name": data["Name"],
-                "TierName": data["TierName"],
-                "Salt": data["Salt"],
-            }
+        # normalize Probabilities
+        gachaItems = self.normalize_Probabilities(gachaItems)
+        probabilities = [item["Rate_Up"] for item in gachaItems]
+        chosen_idx = choices(range(len(gachaItems)), weights=probabilities, k=1)[0]
+        data = gachaItems[chosen_idx]
+
+        # ตัวละครที่สุ่มได้ N-SR
+        item = {
+            "Character_ID": data["Character_ID"],
+            "Name": data["Name"],
+            "TierName": data["TierName"],
+            "Salt": data["Salt"],
+        }
 
         # Update ค่าใน Value
         self.thisUser[index]["IsGuaranteed"] = thisUser["IsGuaranteed"]
@@ -96,8 +97,8 @@ class GachaCalculator(DatabaseManager):
             # ได้ตามตู้ที่เลือกสุ่มแน่นอน
             thisUser["IsGuaranteed"] = 0
         else:
-            # สุ่มได้ Permanent กับ Limited
-            chosen_idx = random.choices(range(len(bannerTypes)), k=1)[0]
+            # สุ่มประเภทของ Banner ได้ Permanent กับ Limited
+            chosen_idx = choices(range(len(bannerTypes)), k=1)[0]
             banner = bannerTypes[chosen_idx]
             if banner["Name"] == "Permanent":
                 thisUser["IsGuaranteed"] = 1
@@ -111,26 +112,14 @@ class GachaCalculator(DatabaseManager):
 
         # Filter ตัวละครตามประเภทตู้ที่ได้จาก if else
         bannerItem = [item for item in bannerItem if item["BannerTypeID"] == BannerTypeID]
-        bannerItem = self.normalize_Probabilities(bannerItem)
-        probabilities = [item["Rate_Up"] for item in bannerItem]
-        chosen_idx = random.choices(range(len(bannerItem)), weights=probabilities, k=1)[0]
-        data = bannerItem[chosen_idx]
 
-        # assign ค่าลง ตัวละครตามประเภทตู้ที่ได้จาก if else
-        C_ID = data["Name"]
-        item = {
-            "Character_ID": C_ID,
-            "Name": data["Name"],
-            "TierName": data["TierName"],
-            "Salt": data["Salt"],
-        }
-        return item, thisUser
+        return bannerItem, thisUser
 
     def single_pull(self, bannerName: str):
         items = self.gachaRate
         item_list = list(items.keys())
         probabilities = list(items.values())
-        tier = random.choices(item_list, weights=probabilities, k=1)[0]
+        tier = choices(item_list, weights=probabilities, k=1)[0]
         return self.getItemGacha(tier, bannerName)
 
     def checkGem(self, num_pulls:int):
