@@ -82,19 +82,21 @@ class DatabaseManager:
         result = self.execute_query(query, (userName,))
 
         if len(result) < len(self.list_banner_type()):
-            self.insertUserDetail(userName)
+            self.insertUserDetail(userName, result)
             result = self.get_user_detail(userName)
         return [dict(zip(['UserID', 'BannerTypeID', 'BannerType', 'IsGuaranteed', 'NumberRoll'], row)) for row in result]
 
-    def insertUserDetail(self, userName: str):
+    # จะเพิ่มข้อมูลใหม่ ถ้ายังไม่มี
+    def insertUserDetail(self, userName: str, result: list):
         query = '''
         INSERT INTO user_gacha_detail
             (Banner_Type_ID, User_ID, IsGuaranteed, NumberRoll, Updated_Date)
         VALUES (?, (SELECT ID FROM User Where userName = ?), 0, 0, current_timestamp)
         '''
         banner_Types = self.list_banner_type()
-        newData = [(banner['ID'], userName) for banner in banner_Types]
 
+        already_Banner_Type_ID = [item[1] for item in result]
+        newData = [(banner['ID'], userName) for banner in banner_Types if banner['ID'] not in already_Banner_Type_ID]
         self.execute_many(query, newData)
 
     def get_rate_item(self):

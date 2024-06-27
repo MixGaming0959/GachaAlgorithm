@@ -167,6 +167,8 @@ class GachaCalculator(DatabaseManager):
             return {"Result":results, "Error":None}
         except Exception as e:
             print("Error:",str(e))
+            if e == None or e == "":
+                e = "Something Wrong"
             return {"Result":None, "Error":str(e)}
 
 if __name__ == "__main__":
