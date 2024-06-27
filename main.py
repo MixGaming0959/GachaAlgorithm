@@ -6,7 +6,7 @@ def main():
     gacha_calculator = gacha.GachaCalculator(userName)
     # printAvableBanner(gacha_calculator)
     bannerName = "Rate-Up Mild-R"
-    num_pulls = 10
+    num_pulls = 1420
     item = gacha_calculator.multiple_pulls(bannerName, num_pulls)
     userDeatail = gacha_calculator.getUserDetail(userName, bannerName)
     print("เพชรคงเหลือ: ", gacha_calculator.get_user_gem(userName))
@@ -33,7 +33,7 @@ def main():
         print(f"{key}: Rate: {100*value/count_tier['Count']:.2f}%, Count: {value}")
     print("\nSSR: ")
     for key, value in count_SSR.items():
-        print(f"{key}: Rate: {100*value/count_tier['Count']:.2f}%, Count: {value}")
+        print(f"{key}: Rate: {100*value/count_SSR['Count']:.2f}%, Count: {value}")
 
 
 def printAvableBanner(gacha_calculator):
